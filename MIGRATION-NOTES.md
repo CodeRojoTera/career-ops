@@ -106,11 +106,38 @@ git log --all --oneline | grep -E "sync-inbox|indeed-scan|linkedin-scan|Step 4b"
 #   - indeed-scan + linkedin-scan routing (this commit)
 ```
 
+## Static resume policy (added 2026-05-10)
+
+User decision: **always use the iterated Spring 2026 PDF resume**, never the auto-generated tailored CVs from `/career-ops pdf` or batch scripts.
+
+**Rationale:**
+- ATS systems extract text — they don't care about visual polish.
+- Recruiters DO see the visual PDF — the user's iterated version (LibreOffice-rendered) is more polished than career-ops's default Space Grotesk + DM Sans HTML template.
+- Tailored CONTENT moves the needle in COVER LETTERS, not resumes. The user's resume already covers the proof points.
+- Career-ops will continue to generate tailored cover letters per role (the high-leverage customization).
+
+**Configuration (in `config/profile.yml`, gitignored personal data):**
+- `cv.prefer_static_resume: true`
+- `cv.static_resume_path_en: <OneDrive path to Eng PDF>`
+- `cv.static_resume_path_es: <OneDrive path to Esp PDF>`
+- `cv.static_resume_notes: <explanation>`
+
+**Behavior expected from career-ops modes (read profile.yml on every invocation):**
+- `apply` mode: when uploading resume, reference `static_resume_path_en` (or `_es` if form is in Spanish). Do NOT generate.
+- `pdf` mode: refuse to run (or warn user) if `prefer_static_resume: true`. User must explicitly opt in if they really want a tailored PDF.
+- Apply prep packs: §3 "Tailored CV emphasis notes" → still useful for the user to reference WHILE writing the cover letter, but NOT for actually generating a new PDF.
+
+**Existing artifacts:** the 5 generated PDFs in `output/2026-05-10-*/cv-*.pdf` (and the `batch/build-tailored-cvs.mjs` script) are kept on disk for reference but should NOT be uploaded to portals. User uploads the static PDF from OneDrive instead.
+
+This is config-only (no code change). All modes read `profile.yml::cv` section already; honoring `prefer_static_resume` is a Claude-prompt-level convention, not a hard-coded behavior.
+
 ## Long-term option
 
 If `/career-ops sync-inbox` + followup Step 4b + `/career-ops indeed-scan` prove valuable, consider PRs to upstream `santifer/career-ops`. They are generic (MCP-connector-based, no personal data, follow career-ops's mode-spec conventions). The maintainer might accept them and the maintenance burden disappears.
 
 `/career-ops linkedin-scan` is dicier to upstream — depends on Composio + has anti-bot risk that career-ops's brand might not want to associate with. Probably keep that one fork-only.
+
+The static_resume policy is also worth upstreaming as an optional `cv.prefer_static_resume` flag — many career-ops users probably have polished PDFs they prefer over template-generated ones.
 
 ## Other customizations
 
