@@ -66,9 +66,51 @@ claude
 # should offer to create Gmail drafts after presenting them.
 ```
 
+## Custom modes: `/career-ops indeed-scan` + `/career-ops linkedin-scan`
+
+Added 2026-05-10 to expand discovery beyond what `/career-ops scan` covers (which is heavy on cap-exempt + Greenhouse/Ashby/Lever, light on the two biggest aggregators).
+
+### `/career-ops indeed-scan`
+
+Uses the **`claude.ai Indeed`** MCP connector (Anthropic-managed, OAuth-completed at account level). Tools available: Job Search, Job Details, Company Information, Get Resume — all read-only.
+
+**Files added (upstream auto-updater leaves alone):**
+- `modes/indeed-scan.md` — full mode spec. 8 steps including: MCP availability check, query batch building from `portals.yml::title_filter`, dispatch to Indeed Job Search, filter pipeline (negative + citizenship + dedupe + recency), enrichment via Job Details (top 30), composite scoring, ranked presentation with `add to pipeline` / `evaluate now` / `show all` / `refine` actions.
+
+### `/career-ops linkedin-scan`
+
+LinkedIn has **NO official Anthropic MCP connector** as of 2026-05-10. This mode uses **Composio's BROWSER_TOOL_CREATE_TASK** (via `claude.ai Composio-JobSearch` connector) to navigate LinkedIn search pages. Anti-bot risk is real; mode handles blocks gracefully and falls back to manual workflow recommendation.
+
+**Files added:**
+- `modes/linkedin-scan.md` — full mode spec. Same 8-step pattern as indeed-scan. Differences: LinkedIn URL builder (uses `f_E`, `f_TPR`, `f_AL` query params), sequential dispatch (not parallel — anti-bot), graceful block handling (halt + suggest manual + Indeed alternative if >50% queries blocked), explicit "no auto Easy Apply" disclaimer.
+
+### Files modified (upstream WILL revert these on update):
+
+- `.agents/skills/career-ops/SKILL.md` — 4 edits:
+  1. `argument-hint` extended with `sync-inbox | indeed-scan | linkedin-scan`
+  2. Routing table extended (3 new rows)
+  3. Discovery menu extended (3 new lines describing each custom mode)
+  4. Standalone modes list extended (sync-inbox + indeed-scan + linkedin-scan)
+
+### Re-applying after an upstream update
+
+Same pattern as the prior customizations. The 3 mode files (`sync-inbox.md`, `indeed-scan.md`, `linkedin-scan.md`) survive updates. SKILL.md needs cherry-pick.
+
+```bash
+# After upstream update reverts SKILL.md, find our customization commits:
+git log --all --oneline | grep -E "sync-inbox|indeed-scan|linkedin-scan|Step 4b"
+
+# Cherry-pick or manually re-add:
+#   - sync-inbox routing (commit f6602c7)
+#   - followup Step 4b (commit 3cb40f7)
+#   - indeed-scan + linkedin-scan routing (this commit)
+```
+
 ## Long-term option
 
-If `/career-ops sync-inbox` and the followup Gmail-draft extension prove valuable, consider opening a PR to upstream `santifer/career-ops` so they live there and the maintenance burden disappears. Both are generic (Gmail-MCP-based, no personal data) that would benefit other career-ops users — sync-inbox is a meaningful new capability, the followup extension is a quality-of-life improvement that keeps the existing safety guarantees (review + manual send).
+If `/career-ops sync-inbox` + followup Step 4b + `/career-ops indeed-scan` prove valuable, consider PRs to upstream `santifer/career-ops`. They are generic (MCP-connector-based, no personal data, follow career-ops's mode-spec conventions). The maintainer might accept them and the maintenance burden disappears.
+
+`/career-ops linkedin-scan` is dicier to upstream — depends on Composio + has anti-bot risk that career-ops's brand might not want to associate with. Probably keep that one fork-only.
 
 ## Other customizations
 
