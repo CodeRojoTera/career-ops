@@ -38,9 +38,37 @@ claude
 
 If the upstream changes also touched the routing table or argument-hint, resolve the conflict in favor of UPSTREAM's structure + add our `sync-inbox` line back in.
 
+## Custom extension: Gmail-draft creation in `/career-ops followup`
+
+Added 2026-05-10 to remove the copy-paste friction after `/career-ops followup` generates email drafts. The mode now has a Step 4b that uses the Gmail MCP `create_draft` tool (write tool, "Needs approval" by default) to create the drafts directly in the user's Gmail Drafts folder. The user reviews + clicks Send in Gmail (intentional safety — Gmail MCP does NOT expose Send, only create-draft).
+
+**Files modified (upstream's auto-updater WILL revert this on update):**
+- `modes/followup.md` — inserted Step 4b between current Step 4 ("Present Drafts") and Step 5 ("Record Follow-ups"). Self-contained section with conditional logic (skip silently if Gmail MCP unavailable, prompt user to opt in if available, create per-draft, do NOT mark as sent until user confirms in chat).
+
+The Step 4b text is wrapped in a `> Custom extension added 2026-05-10 — see MIGRATION-NOTES.md` blockquote so it's visually obvious in the mode file when re-applying after an update.
+
+**To re-apply after an upstream update of followup.md:**
+
+```bash
+# 1. Diff to see what was lost
+git diff HEAD~1 -- modes/followup.md
+
+# 2. Cherry-pick or manually re-insert the Step 4b section. Look for the
+#    blockquote marker "Custom extension added 2026-05-10" — that's the
+#    boundary of our addition.
+
+# 3. Verify
+npm run doctor
+claude
+> /career-ops followup
+# Step 4b should appear in the mode file output if you ask Claude to dump
+# the loaded mode, or just trust the test: a real followup invocation
+# should offer to create Gmail drafts after presenting them.
+```
+
 ## Long-term option
 
-If `/career-ops sync-inbox` proves valuable, consider opening a PR to upstream `santifer/career-ops` so the mode lives there and the maintenance burden disappears. The mode is generic enough (Gmail-MCP-based, no personal data) that it would benefit other career-ops users.
+If `/career-ops sync-inbox` and the followup Gmail-draft extension prove valuable, consider opening a PR to upstream `santifer/career-ops` so they live there and the maintenance burden disappears. Both are generic (Gmail-MCP-based, no personal data) that would benefit other career-ops users — sync-inbox is a meaningful new capability, the followup extension is a quality-of-life improvement that keeps the existing safety guarantees (review + manual send).
 
 ## Other customizations
 

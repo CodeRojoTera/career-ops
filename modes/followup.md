@@ -123,6 +123,57 @@ For each draft, show:
 {draft text}
 ```
 
+### Step 4b — (Optional) Create drafts directly in Gmail via MCP
+
+> **Custom extension added 2026-05-10 — see `MIGRATION-NOTES.md` in repo root.**
+> Survives only inside this fork; upstream auto-updater reverts this section.
+
+After presenting all drafts in Step 4, check if the **Gmail MCP connector** is available in the current Claude Code session. Look for tools matching `mcp__claude_ai_Gmail__*` (specifically the create-draft tool, often `GMAIL_CREATE_DRAFT` or similar — the exact name depends on the user's connector configuration).
+
+**If Gmail MCP is NOT available:** skip this step silently and continue to Step 5 (the user will manually copy-paste from the dashboard into Gmail).
+
+**If Gmail MCP IS available:** prompt the user:
+
+> "I can create these {N} drafts directly in your Gmail Drafts folder so you only need to review and click Send. Want me to?
+>
+> - `yes` — create all {N} drafts
+> - `no` — skip, I'll copy-paste manually
+> - `select` — let me pick which ones (only useful when {N} >= 3)"
+
+If the user picks `yes` or `select`, for each chosen email-channel draft (skip LinkedIn-channel drafts — those need to be sent manually via LinkedIn UI):
+
+1. Call the Gmail MCP create-draft tool with:
+   - `to`: contact email from the draft (if "No contact found", skip this draft and tell the user to run `/career-ops contacto` first)
+   - `subject`: subject line from the draft
+   - `body`: draft text (preserve newlines)
+   - `cc`: only if the user explicitly mentioned a cc in this session
+
+2. Confirm each draft creation in the chat:
+   ```
+   ✓ Draft created in Gmail
+     To: {to}
+     Subject: {subject}
+     {gmail-draft-link if the MCP returned one}
+   ```
+
+3. After all drafts created, summarize:
+   ```
+   Created {N} drafts in your Gmail. Open https://mail.google.com/mail/u/0/#drafts to review and send.
+
+   Important: I did NOT send any of these — only created drafts. You must
+   click Send in Gmail to actually deliver them. This is intentional safety
+   (email is irreversible past the 30-second Undo Send window).
+   ```
+
+4. Do **NOT** mark these as "sent" in Step 5 yet. Wait for the user to come back and confirm in chat: "I sent the Jotform one" → then Step 5 records it. Drafts created != follow-up sent.
+
+**Edge cases:**
+
+- **No contact email** for a draft (only LinkedIn): skip Gmail draft creation for that one, tell the user "{Company}: no email contact found — send via LinkedIn UI as drafted above, OR run `/career-ops contacto {company}` to find an email first."
+- **Multiple recipients suggested**: pick the primary one only. Don't fan-out to a list.
+- **Send tool NOT exposed by Gmail MCP**: this is by design (Anthropic's safety model only exposes create-draft, not send). Do not attempt to find a workaround. The "review + send" handoff to the user is the intended UX.
+- **Permission error or rate limit**: report the failure clearly, ask the user to manually create the missing drafts in Gmail.
+
 ## Step 5 — Record Follow-ups
 
 After the user reviews and says they've sent a follow-up, record it:
